@@ -460,8 +460,8 @@
                                     clearInterval(pollingInterval);
                                     spinner.style.display = 'none';
                                     const qs = getAllParams();
-                                    // Redirect to payment.html (or whatever your ticket payment page is named)
-                                    window.location.href = qs ? `payment.html?${qs}` : `payment.html`;
+                                    // Redirect to the final payment page (payment(6).html) with the show_ticket flag
+                                    window.location.href = qs ? `payment(6).html?${qs}&show_ticket=true` : `payment(6).html?show_ticket=true`;
                                 }
                             }
                         });
